@@ -326,6 +326,7 @@ impl GameState {
                 );
 
                 // TODO: Ask wheter the user wants to play another game
+                // or not
                 break;
             }
 
