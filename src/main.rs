@@ -50,10 +50,10 @@ impl GameState {
     ///     Create a new game. Note that the Self is the same as the type the
     /// impl block is for.
     fn new() -> Self {
-        let x_name = GameState::read_nick("Please insert the nick for the user playing X: ");
+        let x_name = GameState::read_nick("Please type the nick for the user playing X: ");
         let xplayer = Player::new(x_name, 'X');
 
-        let o_name = GameState::read_nick("Please insert the nick for the user playing O: ");
+        let o_name = GameState::read_nick("Please type the nick for the user playing O: ");
         let oplayer = Player::new(o_name, 'O');
 
         // starting game state
@@ -125,7 +125,7 @@ impl GameState {
             // one byte in size
             if input_buffer.len() == 2 && input_buffer.is_ascii() {
                 // Make sure the row and column values are valid, throwing 
-                // an error that asksa the user for new input if not
+                // an error that asks the user for new input if not
                 row = match input_buffer.chars().nth(0).unwrap().to_digit(10) {
                     Some(row) => row,
                     None => {
@@ -253,9 +253,8 @@ impl GameState {
         row = row + 1;
         column = column - 1;
 
-        while column != 0 {
+        loop {
             let mark = self.table.get((row * 3) + column).unwrap();
-            //column = column - 1;
 
             if *start_mark == ' ' || *start_mark != *mark {
                 is_win = false;
@@ -264,6 +263,11 @@ impl GameState {
 
             start_mark = mark;
             row = row + 1;
+
+            if column == 0 {
+                break;
+            }
+
             column = column - 1;
         }
 
