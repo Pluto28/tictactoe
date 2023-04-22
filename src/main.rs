@@ -1,6 +1,5 @@
 // Simple tictactoe
 
-use std::any::type_name;
 use std::io::{stdin, stdout, BufRead, Write};
 use std::process::exit;
 
@@ -37,8 +36,8 @@ impl GameState {
         let mut name = String::new();
 
         print!("{}", msg);
-        stdout().flush();
-        // @TODO: This will panic in case there was an error reading a nick from the user.
+        stdout().flush().unwrap();
+        // @TODO: This will panic in case there was an error reading the user's nickname.
         // Maybe printing an error message and trying again would be better
         stdin().lock().read_line(&mut name).unwrap();
 
@@ -57,9 +56,9 @@ impl GameState {
         let o_name = GameState::get_nick("Please insert the nick for the user playing O: ");
         let oplayer = Player::new(o_name, 'O');
 
-        // Variable in rust are immutable by default.
-        let mut gamestate = GameState {
-            table: vec!['X'; 9],
+        // starting game state
+        let gamestate = GameState {
+            table: vec![' '; 9],
             round: 1,
             players: vec![xplayer, oplayer],
         };
@@ -73,7 +72,7 @@ impl GameState {
     // you will have a runtime error. Fun stuff.
     //
     // print a separator of length - characters.
-    fn row_separator(mut length: u32) {
+    fn row_separator(length: u32) {
         if !(length == 0) {
             print!("-");
             Self::row_separator(length - 1)
@@ -117,12 +116,16 @@ impl GameState {
             // remove the newline character at the end of the string
             input_buffer.pop();
 
+            // So much validation to do. Users, amiright?
+            //
             // since we popped the newline character, this string should now have
             // a length of 2(note that the len method gives us the size in bytes,
             // not the amount of characters). We also check if all characters
             // provided by the user are ascii, in which case each character has
             // one byte in size
             if input_buffer.len() == 2 && input_buffer.is_ascii() {
+                // Make sure the row and column values are valid, prompting
+                // an error and retaking user input if not
                 row = match input_buffer.chars().nth(0).unwrap().to_digit(10) {
                     Some(row) => row,
                     None => {
@@ -140,9 +143,13 @@ impl GameState {
                 };
 
                 if row > 3 || column > 3 {
-                    println!("\n\nColumn or/and row value too big. Try again.\n\n");
+                    println!("\n\nColumn and/or row value too big. Try again.\n\n");
                     continue;
-                } 
+                } else if row < 1 || column < 1 {
+                    println!("\n\nColumn and/or row value too small(needs to be");
+                    println!("between 1 and 3). Try again.\n\n");
+                    continue;
+                }
 
                 break;
             } else if input_buffer == "q" {
@@ -153,21 +160,140 @@ impl GameState {
             }
         }
 
-        (0, 0)
+        (column, row)
     }
 
     fn is_updatable(&self, row: u8, col: u8) -> bool {
-        let val = self.table.get(((row*3) + col) as usize).unwrap();
+        let val = self.table.get(((row * 3) + col) as usize).unwrap();
 
         if *val == ' ' {
             true
-        } else  {
+        } else {
             false
         }
     }
 
-    fn update_table(&mut self, row: u8, column: u8, mark: char) {
-        let val = self.table.get_mut((row + column) as usize).unwrap();
+    fn update_table(&mut self, row: u8, column: u8, playeri: usize) {
+        let mark = self.players.get(playeri).unwrap().get_mark();
+
+        let val = self.table.get_mut(((row * 3) + column) as usize).unwrap();
+        *val = mark
+    }
+
+    // TODO: it's probably possible to replace the 3 functions that follow with
+    // just one function which takes the starting row and column positions on the
+    // table, the change to be applied to each value after each step, and iterate
+    // through the table rows and columns, checking if all their characters match and
+    // are not spaces, which are the characters being used to fill the starting array
+    // (Maybe the array should be filled with the \0, or null, character)
+    fn check_win_rows(&self) -> bool {
+        let mut is_win: bool = true;
+        let mut row = 0;
+
+        while row != 3 {
+            is_win = true;
+
+            let mut start_mark = self.table.get(row * 3).unwrap();
+            let table_slice = self.table.get((row * 3) + 1..(row + 1) * 3).unwrap();
+            for mark in table_slice.iter() {
+                if *start_mark == ' ' || *mark != *start_mark {
+                    is_win = false;
+                    break;
+                }
+                start_mark = mark;
+            }
+
+            if is_win {
+                break;
+            }
+
+            row = row + 1;
+        }
+
+        is_win
+    }
+
+    fn check_win_columns(&self) -> bool {
+        let mut is_win: bool = true;
+        let mut row = 1;
+        let mut col = 0;
+
+        while col != 3 {
+            is_win = true;
+
+            // get the mark at column col for for row at 0
+            let mut start_mark = self.table.get(col).unwrap();
+            while row != 3 {
+                let mark = self.table.get((row * 3) + col).unwrap();
+                if *start_mark == ' ' || *mark != *start_mark {
+                    is_win = false;
+                    break;
+                }
+
+                start_mark = mark;
+                row = row + 1;
+            }
+
+            if is_win {
+                break;
+            }
+
+            col = col + 1;
+        }
+
+        is_win
+    }
+
+    fn check_win_diagonal2(&self) -> bool {
+        let mut is_win = true;
+        let mut row = 0;
+        let mut column = 2;
+
+        let mut start_mark = self.table.get((row * 3) + column).unwrap();
+        println!("{}", start_mark);
+        row = row + 1;
+        column = column - 1;
+        while column != 0 {
+            let mark = self.table.get((row * 3) + column).unwrap();
+            column = column - 1;
+
+            if *start_mark == ' ' || *start_mark != *mark {
+                is_win = false;
+                break;
+            }
+
+            start_mark = mark;
+            row = row + 1;
+        }
+
+        is_win
+    }
+    fn check_win_diagonal1(&self) -> bool {
+        let mut is_win = true;
+        let mut row = 0;
+
+        let mut start_mark = self.table.get((row * 3) + row).unwrap();
+        row = row + 1;
+        while row != 3 {
+            let mark = self.table.get((row * 3) + row).unwrap();
+
+            if *start_mark == ' ' || *start_mark != *mark {
+                is_win = false;
+                break;
+            }
+            start_mark = mark;
+            row = row + 1;
+        }
+
+        is_win
+    }
+
+    fn check_win_diagonals(&self) -> bool {
+        self.check_win_diagonal1() || self.check_win_diagonal2()
+    }
+
+    fn is_win(&self) -> bool {
+        self.check_win_rows() || self.check_win_columns() || self.check_win_diagonals()
     }
 
     fn game_loop(&mut self) {
@@ -175,15 +301,31 @@ impl GameState {
         loop {
             self.print_table();
 
-            let player = self.players.get(playeri).unwrap();
-            let name = player.get_name();
-            let mark = player.get_mark();
-
+            let name = self.players.get(playeri).unwrap().get_name();
             let (col, row) = Self::get_user_input(name);
 
-            if !self.is_updatable(row as u8, col as u8) {
+            if self.is_updatable((row - 1) as u8, (col - 1) as u8) {
+                self.update_table((row - 1) as u8, (col - 1) as u8, playeri);
+            } else {
                 println!("\n\nPlace is already taken\n\n");
                 continue;
+            }
+
+            // the winner is the player that made the play this round, and so
+            // the winer's index for the array of players is the actual player
+            // index
+            if self.is_win() {
+                self.print_table();
+
+                let player = self.players.get(playeri).unwrap();
+                println!(
+                    "\n\nCongratulations {}({}), you won!!!\n\n",
+                    player.get_name(),
+                    player.get_mark()
+                );
+
+                // TODO: Ask wheter the user wants to play another game
+                break;
             }
 
             playeri = (playeri + 1) % 2;
@@ -193,6 +335,5 @@ impl GameState {
 
 fn main() {
     let mut state = GameState::new();
-
     state.game_loop();
 }
