@@ -32,7 +32,7 @@ impl Player {
 
 // impl blocks are used to implement behavior for structures or other data types
 impl GameState {
-    fn get_nick(msg: &str) -> String {
+    fn read_nick(msg: &str) -> String {
         let mut name = String::new();
 
         print!("{}", msg);
@@ -50,10 +50,10 @@ impl GameState {
     ///     Create a new game. Note that the Self is the same as the type the
     /// impl block is for.
     fn new() -> Self {
-        let x_name = GameState::get_nick("Please insert the nick for the user playing X: ");
+        let x_name = GameState::read_nick("Please insert the nick for the user playing X: ");
         let xplayer = Player::new(x_name, 'X');
 
-        let o_name = GameState::get_nick("Please insert the nick for the user playing O: ");
+        let o_name = GameState::read_nick("Please insert the nick for the user playing O: ");
         let oplayer = Player::new(o_name, 'O');
 
         // starting game state
@@ -124,8 +124,8 @@ impl GameState {
             // provided by the user are ascii, in which case each character has
             // one byte in size
             if input_buffer.len() == 2 && input_buffer.is_ascii() {
-                // Make sure the row and column values are valid, prompting
-                // an error and retaking user input if not
+                // Make sure the row and column values are valid, throwing 
+                // an error that asksa the user for new input if not
                 row = match input_buffer.chars().nth(0).unwrap().to_digit(10) {
                     Some(row) => row,
                     None => {
@@ -143,11 +143,12 @@ impl GameState {
                 };
 
                 if row > 3 || column > 3 {
-                    println!("\n\nColumn and/or row value too big. Try again.\n\n");
+                    println!("\n\nColumn and/or row value too big(need to be");
+                    println!("smaller than 3. Try again.\n\n");
                     continue;
                 } else if row < 1 || column < 1 {
                     println!("\n\nColumn and/or row value too small(needs to be");
-                    println!("between 1 and 3). Try again.\n\n");
+                    println!("bigger than 1). Try again.\n\n");
                     continue;
                 }
 
@@ -221,7 +222,6 @@ impl GameState {
         while col != 3 {
             is_win = true;
 
-            // get the mark at column col for for row at 0
             let mut start_mark = self.table.get(col).unwrap();
             while row != 3 {
                 let mark = self.table.get((row * 3) + col).unwrap();
@@ -250,12 +250,12 @@ impl GameState {
         let mut column = 2;
 
         let mut start_mark = self.table.get((row * 3) + column).unwrap();
-        println!("{}", start_mark);
         row = row + 1;
         column = column - 1;
+
         while column != 0 {
             let mark = self.table.get((row * 3) + column).unwrap();
-            column = column - 1;
+            //column = column - 1;
 
             if *start_mark == ' ' || *start_mark != *mark {
                 is_win = false;
@@ -264,6 +264,7 @@ impl GameState {
 
             start_mark = mark;
             row = row + 1;
+            column = column - 1;
         }
 
         is_win
