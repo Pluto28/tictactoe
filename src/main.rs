@@ -237,8 +237,10 @@ impl GameState {
             if is_win {
                 break;
             }
+            
 
             col = col + 1;
+            row = 1;
         }
 
         is_win
@@ -273,6 +275,7 @@ impl GameState {
 
         is_win
     }
+
     fn check_win_diagonal1(&self) -> bool {
         let mut is_win = true;
         let mut row = 0;
@@ -299,6 +302,19 @@ impl GameState {
 
     fn is_win(&self) -> bool {
         self.check_win_rows() || self.check_win_columns() || self.check_win_diagonals()
+    }
+
+    fn is_draw(&self) -> bool {
+        let mut draw: bool = true;
+
+        for mark in self.table.iter() {
+            if *mark == ' ' {
+                draw = false;
+                break;
+            }
+        }
+
+        draw
     }
 
     fn game_loop(&mut self) {
@@ -328,6 +344,13 @@ impl GameState {
                     player.get_name(),
                     player.get_mark()
                 );
+
+                // TODO: Ask wheter the user wants to play another game
+                // or not
+                break;
+            } else if self.is_draw() {
+                self.print_table();
+                println!("\n\nGame ended in a draw!\n\n");
 
                 // TODO: Ask wheter the user wants to play another game
                 // or not
